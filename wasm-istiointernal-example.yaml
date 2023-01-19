@@ -1,0 +1,58 @@
+apiVersion: istiointernal.tsb.tetrate.io/v2
+kind: Group
+metadata:
+  organization: tetrate
+  tenant: tetrate
+  workspace: httpbin
+  name: wasm-direct-mode
+spec:
+  namespaceSelector:
+    names:
+    - "*/*"
+---
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: wasm-header-injector
+  namespace: httpbin
+  labels:
+    istio.io/rev: tsb
+  annotations:
+    tsb.tetrate.io/organization: tetrate
+    tsb.tetrate.io/tenant: tetrate
+    tsb.tetrate.io/workspace: httpbin
+    tsb.tetrate.io/istioInternalGroup: wasm-direct-mode
+spec:
+  selector:
+    matchLabels:
+      app: httpbin-ingress-gateway
+  url: http://wasm-http-server:443/main.wasm
+  imagePullPolicy: Always
+  pluginConfig:
+    header: x-wasm-header
+    value: tsb-header
+---
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: waf
+  namespace: httpbin
+  labels:
+    istio.io/rev: tsb
+  annotations:
+    tsb.tetrate.io/organization: tetrate
+    tsb.tetrate.io/tenant: tetrate
+    tsb.tetrate.io/workspace: httpbin
+    tsb.tetrate.io/istioInternalGroup: wasm-direct-mode
+spec:
+  phase: AUTHN
+  pluginConfig:
+    rules:
+    - Include @recommended-conf
+    - SecRuleEngine On
+    - Include @crs-setup-conf
+    - Include @owasp_crs/*.conf
+  selector:
+    matchLabels:
+      app: httpbin-ingress-gateway
+  url: http://wasm-http-server:443/waf.wasm
